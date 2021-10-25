@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from model.utils.config import cfg
-from .proposal_layer import _ProposalLayer
+from .proposal_layer import _ProposalLayer, _ProposalLayer2
 from .anchor_target_layer import _AnchorTargetLayer
 from model.utils.net_utils import _smooth_l1_loss
 
@@ -18,7 +18,7 @@ class _RPN(nn.Module):
     """ region proposal network """
     def __init__(self, din):
         super(_RPN, self).__init__()
-        
+
         self.din = din  # get depth of input feature map, e.g., 512
         self.anchor_scales = cfg.ANCHOR_SCALES
         self.anchor_ratios = cfg.ANCHOR_RATIOS
@@ -36,7 +36,7 @@ class _RPN(nn.Module):
         self.RPN_bbox_pred = nn.Conv2d(512, self.nc_bbox_out, 1, 1, 0)
 
         # define proposal layer
-        self.RPN_proposal = _ProposalLayer(self.feat_stride, self.anchor_scales, self.anchor_ratios)
+        self.RPN_proposal = _ProposalLayer2(self.feat_stride, self.anchor_scales, self.anchor_ratios)
 
         # define anchor target layer
         self.RPN_anchor_target = _AnchorTargetLayer(self.feat_stride, self.anchor_scales, self.anchor_ratios)
@@ -74,8 +74,7 @@ class _RPN(nn.Module):
         # proposal layer
         cfg_key = 'TRAIN' if self.training else 'TEST'
 
-        rois = self.RPN_proposal((rpn_cls_prob.data, rpn_bbox_pred.data,
-                                 im_info, cfg_key))
+        rois = self.RPN_proposal(rpn_cls_prob.data, rpn_bbox_pred.data, im_info)
 
         self.rpn_loss_cls = 0
         self.rpn_loss_box = 0
